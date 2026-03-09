@@ -698,6 +698,22 @@ BxZA3knyYRiB0FNYSxI6YuCIqTjr0AoBvNHdkdjkv2VFomYNBd8ruA==
             self.assertNotEqual(old["serial"], c.serial_number)
             self.assertGreater(c.validity_end, old["end"])
 
+    def test_renew_preserves_validity_duration(self):
+        from django.utils import timezone as tz
+
+        custom_duration = timedelta(days=5 * 365)
+        validity_start = datetime.now() - timedelta(days=1)
+        validity_end = validity_start + custom_duration
+        ca = self._create_ca(validity_start=validity_start, validity_end=validity_end)
+        ca.renew()
+        ca.refresh_from_db()
+        expected_end = tz.now() + custom_duration
+        self.assertAlmostEqual(
+            ca.validity_end.timestamp(),
+            expected_end.timestamp(),
+            delta=5,
+        )
+
     def test_ca_common_name_length(self):
         common_name = "a" * 65
         with self.assertRaises(ValidationError) as cm:

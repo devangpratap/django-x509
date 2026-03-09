@@ -660,10 +660,18 @@ class BaseX509(models.Model):
 
     def renew(self):
         self.serial_number = self._generate_serial_number()
-        if hasattr(self, "ca"):
-            self.validity_end = default_cert_validity_end()
-        else:
-            self.validity_end = default_ca_validity_end()
+        vs = self.validity_start
+        ve = self.validity_end
+        # Normalize to tz-aware before subtracting to handle the case where
+        # validity_start is naive (default_validity_start) but validity_end
+        # is tz-aware (default_cert/ca_validity_end), which happens when
+        # renew() is called on an instance that was never re-fetched from DB.
+        if timezone.is_naive(vs):
+            vs = timezone.make_aware(vs)
+        if timezone.is_naive(ve):
+            ve = timezone.make_aware(ve)
+        duration = ve - vs
+        self.validity_end = timezone.now() + duration
         self._generate()
         self.save()
 

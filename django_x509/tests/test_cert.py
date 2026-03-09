@@ -555,6 +555,23 @@ BxZA3knyYRiB0FNYSxI6YuCIqTjr0AoBvNHdkdjkv2VFomYNBd8ruA==
         self.assertEqual(old_ca_end, ca.validity_end)
         self.assertEqual(old_ca_serial_number, ca.serial_number)
 
+    def test_renew_preserves_validity_duration(self):
+        from django.utils import timezone as tz
+
+        custom_duration = timedelta(days=730)
+        validity_start = datetime.now() - timedelta(days=1)
+        validity_end = validity_start + custom_duration
+        cert = self._create_cert(
+            validity_start=validity_start, validity_end=validity_end
+        )
+        cert.renew()
+        expected_end = tz.now() + custom_duration
+        self.assertAlmostEqual(
+            cert.validity_end.timestamp(),
+            expected_end.timestamp(),
+            delta=5,
+        )
+
     def test_cert_common_name_length(self):
         common_name = "a" * 65
         with self.assertRaises(ValidationError) as context_manager:
